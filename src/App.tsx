@@ -1,10 +1,11 @@
-function App() {
+import Form from "@/components/Form";
 
+function App() {
   return (
     <section>
-      <h1>Hello World</h1>
+      <Form />
     </section>
-  )
+  );
 }
 
-export default App
+export default App;
