@@ -15,6 +15,7 @@ interface UseMultiPlatformPostOptions {
   onSuccess?: (response: MultiPlatformPostResponse) => void;
   onError?: (error: string) => void;
   onPartialSuccess?: (results: PlatformPostResult[]) => void;
+  requestDelay?: number; // Delay in milliseconds between platform requests
 }
 
 export const useMultiPlatformPost = (
@@ -56,167 +57,166 @@ export const useMultiPlatformPost = (
 
       setUploadProgress(10);
 
-      const postingPromises = platforms.map(
-        async (platform): Promise<PlatformPostResult> => {
-          try {
-            let result: PlatformPostResult;
+      const results: PlatformPostResult[] = [];
+      const delay = options.requestDelay || 2000; // Default 2 second delay between requests
 
-            switch (platform) {
-              case "linkedin": {
-                let mediaAssetUrn: string | undefined;
+      // Process platforms sequentially with delay
+      for (let i = 0; i < platforms.length; i++) {
+        const platform = platforms[i] as Platform;
 
-                if (
-                  content.media &&
-                  (content.mediaType === "IMAGE" ||
-                    content.mediaType === "VIDEO")
-                ) {
-                  const uploadResponse = await linkedInApi.uploadMedia(
-                    content.media,
-                    `${content.mediaType === "IMAGE" ? "Image" : "Video"} from Auto-Post App`,
-                    `${content.mediaType === "IMAGE" ? "Image" : "Video"} uploaded via Auto-Post application`,
-                  );
+        try {
+          let result: PlatformPostResult;
 
-                  if (uploadResponse.success && uploadResponse.data?.assetUrn) {
-                    mediaAssetUrn = uploadResponse.data.assetUrn;
-                  } else {
-                    throw new Error(
-                      uploadResponse.message || "Failed to upload media",
-                    );
-                  }
-                }
+          // Wait for the specified delay if this isn't the first request
+          if (i > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
 
-                const linkedinData: CreatePostRequest = {
-                  text: content.text.trim(),
-                  visibility: platformSpecific.linkedin?.visibility || "PUBLIC",
-                  ...(content.mediaType !== "TEXT" && {
-                    mediaType: content.mediaType,
-                  }),
-                  ...(mediaAssetUrn && {
-                    media: [
-                      {
-                        assetUrn: mediaAssetUrn,
-                        title: `${content.mediaType === "IMAGE" ? "Image" : "Video"} from Auto-Post App`,
-                        description: `${content.mediaType === "IMAGE" ? "Image" : "Video"} uploaded via Auto-Post application`,
-                      },
-                    ],
-                  }),
-                  ...(platformSpecific.linkedin?.articleData && {
-                    articleUrl: platformSpecific.linkedin.articleData.url,
-                    articleTitle: platformSpecific.linkedin.articleData.title,
-                    ...(platformSpecific.linkedin.articleData.description && {
-                      articleDescription:
-                        platformSpecific.linkedin.articleData.description,
-                    }),
-                  }),
-                };
+          switch (platform) {
+            case "linkedin": {
+              let mediaAssetUrn: string | undefined;
 
-                const response = await linkedInApi.createPost(linkedinData);
-                result = {
-                  platform: "linkedin",
-                  success: response.success,
-                  data: response,
-                  error: response.success ? undefined : response.message,
-                };
-                break;
-              }
-
-              case "x": {
-                const tweetData: CreateTweetRequest = {
-                  text: content.text.trim(),
-                  ...(content.media && { media: content.media }),
-                };
-
-                const response = await xApi.createTweet(tweetData);
-                result = {
-                  platform: "x",
-                  success: response.success,
-                  data: response,
-                  error: response.success ? undefined : response.message,
-                };
-                break;
-              }
-
-              case "substack": {
-                if (!platformSpecific.substack?.title) {
-                  throw new Error("Substack title is required");
-                }
-
-                const sessionId = localStorage.getItem("substackSessionId");
-                if (!sessionId) {
-                  throw new Error("Substack session not found");
-                }
-
-                const substackData: CreateSubstackPostRequest = {
-                  title: platformSpecific.substack.title,
-                  subtitle: platformSpecific.substack.subtitle,
-                  content: content.text.trim(),
-                  isDraft: platformSpecific.substack.isDraft || false,
-                };
-
-                const response = await substackApi.createPost(
-                  sessionId,
-                  substackData,
+              if (
+                content.media &&
+                (content.mediaType === "IMAGE" || content.mediaType === "VIDEO")
+              ) {
+                const uploadResponse = await linkedInApi.uploadMedia(
+                  content.media,
+                  `${content.mediaType === "IMAGE" ? "Image" : "Video"} from Auto-Post App`,
+                  `${content.mediaType === "IMAGE" ? "Image" : "Video"} uploaded via Auto-Post application`,
                 );
-                result = {
-                  platform: "substack",
-                  success: response.success,
-                  data: response,
-                  error: response.success ? undefined : response.message,
-                };
-                break;
+
+                if (uploadResponse.success && uploadResponse.data?.assetUrn) {
+                  mediaAssetUrn = uploadResponse.data.assetUrn;
+                } else {
+                  throw new Error(
+                    uploadResponse.message || "Failed to upload media",
+                  );
+                }
               }
 
-              default:
-                throw new Error(`Unsupported platform: ${platform}`);
+              const linkedinData: CreatePostRequest = {
+                text: content.text.trim(),
+                visibility: platformSpecific.linkedin?.visibility || "PUBLIC",
+                ...(content.mediaType !== "TEXT" && {
+                  mediaType: content.mediaType,
+                }),
+                ...(mediaAssetUrn && {
+                  media: [
+                    {
+                      assetUrn: mediaAssetUrn,
+                      title: `${content.mediaType === "IMAGE" ? "Image" : "Video"} from Auto-Post App`,
+                      description: `${content.mediaType === "IMAGE" ? "Image" : "Video"} uploaded via Auto-Post application`,
+                    },
+                  ],
+                }),
+                ...(platformSpecific.linkedin?.articleData && {
+                  articleUrl: platformSpecific.linkedin.articleData.url,
+                  articleTitle: platformSpecific.linkedin.articleData.title,
+                  ...(platformSpecific.linkedin.articleData.description && {
+                    articleDescription:
+                      platformSpecific.linkedin.articleData.description,
+                  }),
+                }),
+              };
+
+              const response = await linkedInApi.createPost(linkedinData);
+              result = {
+                platform: "linkedin",
+                success: response.success,
+                data: response,
+                error: response.success ? undefined : response.message,
+              };
+              break;
             }
 
-            return result;
-          } catch (error) {
-            console.error(`Error posting to ${platform}:`, error);
-            return {
-              platform,
-              success: false,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : `Failed to post to ${platform}`,
-            };
+            case "x": {
+              const tweetData: CreateTweetRequest = {
+                text: content.text.trim(),
+                ...(content.media && { media: content.media }),
+              };
+
+              const response = await xApi.createTweet(tweetData);
+              result = {
+                platform: "x",
+                success: response.success,
+                data: response,
+                error: response.success ? undefined : response.message,
+              };
+              break;
+            }
+
+            case "substack": {
+              if (!platformSpecific.substack?.title) {
+                throw new Error("Substack title is required");
+              }
+
+              const sessionId = localStorage.getItem("substackSessionId");
+              if (!sessionId) {
+                throw new Error("Substack session not found");
+              }
+
+              const substackData: CreateSubstackPostRequest = {
+                title: platformSpecific.substack.title,
+                subtitle: platformSpecific.substack.subtitle,
+                content: content.text.trim(),
+                isDraft: platformSpecific.substack.isDraft || false,
+              };
+
+              const response = await substackApi.createPost(
+                sessionId,
+                substackData,
+              );
+              result = {
+                platform: "substack",
+                success: response.success,
+                data: response,
+                error: response.success ? undefined : response.message,
+              };
+              break;
+            }
+
+            default:
+              throw new Error(`Unsupported platform: ${platform}`);
           }
-        },
-      );
 
-      setUploadProgress(50);
+          results.push(result);
 
-      const settledResults = await Promise.allSettled(postingPromises);
+          // Update progress based on completed platforms
+          setUploadProgress(
+            Math.round((results.length / platforms.length) * 90) + 10,
+          );
 
-      const platformResults: PlatformPostResult[] = settledResults.map(
-        (result, index) => {
-          if (result.status === "fulfilled") {
-            return result.value;
-          } else {
-            return {
-              platform: platforms[index] as Platform,
-              success: false,
-              error:
-                result.reason instanceof Error
-                  ? result.reason.message
-                  : "Unknown error occurred",
-            };
+          // Update results in real-time
+          setResults([...results]);
+
+          // Call onPartialSuccess after each successful platform post
+          if (result.success && options.onPartialSuccess) {
+            options.onPartialSuccess(results);
           }
-        },
-      );
+        } catch (error) {
+          console.error(`Error posting to ${platform}:`, error);
+          const errorResult: PlatformPostResult = {
+            platform,
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : `Failed to post to ${platform}`,
+          };
+          results.push(errorResult);
+          setResults([...results]);
+        }
+      }
 
-      setResults(platformResults);
-      setUploadProgress(90);
+      setUploadProgress(100);
 
-      const successfulPosts = platformResults.filter(
-        (result) => result.success,
-      );
-      const failedPosts = platformResults.filter((result) => !result.success);
+      const successfulPosts = results.filter((result) => result.success);
+      const failedPosts = results.filter((result) => !result.success);
 
       const response: MultiPlatformPostResponse = {
         success: failedPosts.length === 0,
-        results: platformResults.map((result) => ({
+        results: results.map((result) => ({
           platform: result.platform,
           success: result.success,
           data: result.data,
@@ -228,13 +228,11 @@ export const useMultiPlatformPost = (
             : `Posted to ${successfulPosts.length}/${platforms.length} platform(s). ${failedPosts.length} failed.`,
       };
 
-      setUploadProgress(100);
-
       if (response.success) {
         setPostSuccess(true);
         options.onSuccess?.(response);
       } else if (successfulPosts.length > 0) {
-        options.onPartialSuccess?.(platformResults);
+        options.onPartialSuccess?.(results);
       } else {
         throw new Error(
           `Failed to post to all platforms: ${failedPosts.map((p) => p.error).join(", ")}`,
