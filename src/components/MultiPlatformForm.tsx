@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaInfoCircle } from "react-icons/fa";
 import { FaLinkedin, FaXTwitter } from "react-icons/fa6";
 import { SiSubstack } from "react-icons/si";
 
@@ -38,7 +39,6 @@ const MultiPlatformForm: React.FC<MultiPlatformFormProps> = ({
 }) => {
   const {
     isPosting,
-    postSuccess,
     postError,
     uploadProgress,
     currentPlatforms,
@@ -296,6 +296,16 @@ const MultiPlatformForm: React.FC<MultiPlatformFormProps> = ({
                 </div>
               )}
 
+              {selectedPlatforms.includes("substack") && (
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <FaInfoCircle className="text-gray-700" />
+                  <p className="text-sm text-gray-700">
+                    With Substack option, request will take a longer time to
+                    complete.
+                  </p>
+                </div>
+              )}
+
               <PostTypeSelector
                 selectedPostType={postType}
                 onPostTypeChange={handlePostTypeChange}
@@ -519,29 +529,6 @@ const MultiPlatformForm: React.FC<MultiPlatformFormProps> = ({
                 )}
               </div>
             ))}
-          </div>
-        )}
-
-        {postSuccess && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-            <p className="text-center font-medium text-green-700">
-              ✅ Multi-platform post completed!
-            </p>
-            {results && results.length > 0 && (
-              <div className="mt-2 space-y-1">
-                {results.map((result) => (
-                  <p
-                    key={result.platform}
-                    className={`text-sm ${
-                      result.success ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {result.platform}:{" "}
-                    {result.success ? "✅ Success" : `❌ ${result.error}`}
-                  </p>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
