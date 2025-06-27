@@ -1,136 +1,134 @@
-import React, { useState } from "react";
-import { FaLinkedin } from "react-icons/fa";
-import { IoArrowBack, IoPersonOutline } from "react-icons/io5";
+import { FaLinkedin, FaXTwitter } from "react-icons/fa6";
+import { IoArrowBackOutline } from "react-icons/io5";
+import { SiSubstack } from "react-icons/si";
 import { useNavigate } from "react-router";
 
-import { useLinkedInAuth } from "@/hooks/useLinkedInAuth";
+import { usePlatformConnections } from "@/hooks/form/usePlatformConnections";
+import { useToastNotifications } from "@/hooks/toast/useToastNotifications";
 
 import Toast from "./Toast";
+import ConnectButton from "./settings/ConnectButton";
+import PlatformConnectionCard from "./settings/PlatformConnectionCard";
+import SubstackConnectForm from "./settings/SubstackConnectForm";
 
-interface ToastState {
-  message: string;
-  type: "success" | "error";
-  show: boolean;
-}
-
-const Settings: React.FC = () => {
+const Settings = () => {
   const navigate = useNavigate();
-  const { linkedinUser, isLoading, connect, logout } = useLinkedInAuth();
-  const [disconnecting, setDisconnecting] = useState(false);
-  const [toast, setToast] = useState<ToastState>({
-    message: "",
-    type: "success",
-    show: false,
-  });
+  const { toast, hideToast } = useToastNotifications();
+  const {
+    auth,
+    disconnecting,
+    handleLinkedInConnect,
+    handleLinkedInDisconnect,
+    handleXConnect,
+    handleXDisconnect,
+    handleSubstackConnect,
+    handleSubstackVerify,
+    handleSubstackWaitVerify,
+    handleSubstackDisconnect,
+  } = usePlatformConnections();
 
-  const showToast = (message: string, type: "success" | "error") => {
-    setToast({ message, type, show: true });
-    setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 5000);
+  const handleGoBack = () => {
+    navigate("/");
   };
 
-  const handleConnect = () => {
-    connect();
-  };
-
-  const handleDisconnect = async () => {
-    setDisconnecting(true);
-    try {
-      const success = await logout();
-      if (success) {
-        showToast("Successfully disconnected from LinkedIn", "success");
-      } else {
-        showToast("Failed to disconnect. Please try again.", "error");
-      }
-    } catch (error) {
-      console.error("Disconnect error:", error);
-      showToast("Error disconnecting from LinkedIn", "error");
-    } finally {
-      setDisconnecting(false);
-    }
-  };
-
-  if (isLoading) {
+  if (auth.linkedin.isLoading || auth.x.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-2xl px-4 pt-8">
-        {/* Header with back button */}
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+    <div className="bg-gray-50">
+      <div className="mx-auto max-w-4xl rounded-lg bg-white p-6 px-4 shadow-lg">
+        <div className="mb-8 flex items-center gap-4">
           <button
-            onClick={() => navigate("/")}
-            className="flex cursor-pointer items-center gap-2 text-gray-600 transition-colors hover:text-gray-800"
-            title="Back to Home"
+            onClick={handleGoBack}
+            className="flex cursor-pointer items-center gap-2 text-gray-600 hover:text-gray-800"
           >
-            <IoArrowBack size={24} />
-            <span className="font-medium">Back to Home</span>
+            <IoArrowBackOutline size={20} />
+            Back to Home
           </button>
         </div>
 
-        {/* LinkedIn Connection Status */}
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
-            <FaLinkedin size={24} color="#0A66C2" className="cursor-pointer" />
-            LinkedIn Connection
-          </h2>
-
-          {linkedinUser ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-4">
-                <div className="flex items-center">
-                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                    <IoPersonOutline className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-green-900">
-                      {linkedinUser.firstName} {linkedinUser.lastName}
-                    </p>
-                    <p className="text-sm text-green-700">
-                      {linkedinUser.email}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <span className="mr-3 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                    Connected
-                  </span>
-                  <button
-                    onClick={handleDisconnect}
-                    disabled={disconnecting}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:bg-red-400"
-                  >
-                    {disconnecting ? "Disconnecting..." : "Disconnect"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <button
-                onClick={handleConnect}
-                className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
-              >
-                Connect LinkedIn Account
-              </button>
-            </div>
-          )}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="mt-2 text-gray-600">
+            Manage your social media connections and preferences
+          </p>
         </div>
 
-        {/* Toast Notification */}
-        {toast.show && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast((prev) => ({ ...prev, show: false }))}
-          />
-        )}
+        <div className="space-y-6">
+          <div>
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+              Platform Connections
+            </h2>
+            <div className="space-y-4">
+              <PlatformConnectionCard
+                title="LinkedIn Connection"
+                description="Connect your LinkedIn account to share professional content"
+                icon={<FaLinkedin size={24} className="text-blue-600" />}
+                isConnected={!!auth.linkedin.linkedinUser}
+                isLoading={auth.linkedin.isLoading}
+                user={auth.linkedin.linkedinUser}
+                onDisconnect={handleLinkedInDisconnect}
+                disconnecting={disconnecting.linkedin}
+              >
+                <ConnectButton linkedin handleConnect={handleLinkedInConnect}>
+                  Connect LinkedIn Account
+                </ConnectButton>
+              </PlatformConnectionCard>
+
+              <PlatformConnectionCard
+                title="X (Twitter) Connection"
+                description="Connect your X account to share posts and updates"
+                icon={<FaXTwitter size={24} className="text-black" />}
+                isConnected={!!auth.x.xUser}
+                isLoading={auth.x.isLoading}
+                user={auth.x.xUser}
+                onDisconnect={handleXDisconnect}
+                disconnecting={disconnecting.x}
+              >
+                <ConnectButton x handleConnect={handleXConnect}>
+                  Connect X Account
+                </ConnectButton>
+              </PlatformConnectionCard>
+
+              <PlatformConnectionCard
+                title="Substack"
+                description="Connect your Substack account to publish posts"
+                icon={<SiSubstack size={24} className="text-orange-600" />}
+                isConnected={
+                  !!auth.substack.substackUser &&
+                  auth.substack.substackUser.status === "logged_in"
+                }
+                isLoading={auth.substack.isLoading}
+                user={auth.substack.substackUser}
+                onDisconnect={handleSubstackDisconnect}
+                disconnecting={auth.substack.isConnecting}
+              >
+                <SubstackConnectForm
+                  isConnected={false}
+                  user={auth.substack.substackUser}
+                  onConnect={handleSubstackConnect}
+                  onVerify={handleSubstackVerify}
+                  onWaitVerify={handleSubstackWaitVerify}
+                  onDisconnect={handleSubstackDisconnect}
+                  isConnecting={auth.substack.isConnecting}
+                />
+              </PlatformConnectionCard>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {toast.show && (
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
+      )}
     </div>
   );
 };

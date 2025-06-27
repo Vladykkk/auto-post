@@ -1,27 +1,25 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
-import { linkedInApi, redirectToLinkedInAuth } from "@/services/api";
-import type { LinkedInUser } from "@/types/api";
+import { redirectToXAuth, xApi } from "@/services/api";
+import type { XUser } from "@/types/api";
 
-export const useLinkedInAuth = () => {
+export const useXAuth = () => {
   const [searchParams] = useSearchParams();
-  const [linkedinUser, setLinkedinUser] = useState<LinkedInUser | null>(null);
+  const [xUser, setXUser] = useState<XUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Handle token from URL parameters after OAuth redirect
   const handleTokenFromURL = () => {
     const token = searchParams.get("token");
+    const provider = searchParams.get("provider");
 
-    if (token) {
-      // Store token in localStorage
-      localStorage.setItem("authToken", token);
+    if (token && provider === "x") {
+      localStorage.setItem("xAuthToken", token);
 
-      // Clean up URL by removing the token parameter
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete("token");
+      newSearchParams.delete("provider");
 
-      // Update URL without the token parameter
       const newURL = newSearchParams.toString()
         ? `${window.location.pathname}?${newSearchParams.toString()}`
         : window.location.pathname;
@@ -30,29 +28,26 @@ export const useLinkedInAuth = () => {
     }
   };
 
-  // Check LinkedIn authentication status
   const checkAuth = async () => {
     try {
-      const userData = await linkedInApi.checkAuth();
-      setLinkedinUser(userData);
+      const userData = await xApi.checkAuth();
+      setXUser(userData);
     } catch (error) {
-      console.error("Error checking LinkedIn auth:", error);
-      setLinkedinUser(null);
+      console.error("Error checking X auth:", error);
+      setXUser(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Connect to LinkedIn
   const connect = () => {
-    redirectToLinkedInAuth();
+    redirectToXAuth();
   };
 
-  // Logout from LinkedIn
   const logout = async () => {
     try {
-      await linkedInApi.logout();
-      setLinkedinUser(null);
+      await xApi.logout();
+      setXUser(null);
       return true;
     } catch (error) {
       console.error("Error logging out:", error);
@@ -66,7 +61,7 @@ export const useLinkedInAuth = () => {
   }, []);
 
   return {
-    linkedinUser,
+    xUser,
     isLoading,
     connect,
     logout,

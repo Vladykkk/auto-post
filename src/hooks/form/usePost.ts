@@ -38,7 +38,6 @@ export const usePost = (options: UsePostOptions = {}) => {
     try {
       let mediaAssetUrn: string | undefined;
 
-      // Step 1: Upload media if file is provided
       if (file && (postType === "IMAGE" || postType === "VIDEO")) {
         setUploadProgress(10);
 
@@ -65,13 +64,11 @@ export const usePost = (options: UsePostOptions = {}) => {
         }
       }
 
-      // Step 2: Create the post
       setUploadProgress(80);
 
       const postData: CreatePostRequest = {
         text: text.trim(),
         visibility,
-        // Only set mediaType for non-text posts (let TEXT posts default to "NONE")
         ...(postType !== "TEXT" && { mediaType: postType }),
         ...(mediaAssetUrn && {
           media: [
@@ -101,7 +98,6 @@ export const usePost = (options: UsePostOptions = {}) => {
         setPostSuccess(true);
         options.onSuccess?.(response);
 
-        // Clear success message after 5 seconds
         setTimeout(() => {
           setPostSuccess(false);
         }, 5000);
@@ -121,7 +117,6 @@ export const usePost = (options: UsePostOptions = {}) => {
       setPostError(errorMessage);
       options.onError?.(errorMessage);
 
-      // Clear error message after 10 seconds
       setTimeout(() => {
         setPostError(null);
       }, 10000);
