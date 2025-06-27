@@ -24,12 +24,21 @@ A React-based web application for posting content to multiple social media platf
 # Install dependencies
 npm install
 
+# Copy environment variables
+cp env.example .env
+
 # Start development server
 npm run dev
 
 # Build for production
 npm run build
 ```
+
+## Environment Variables
+
+Create a `.env` file in the root directory (see `env.example`):
+
+**Note:** The `VITE_` prefix is required for Vite to expose variables to the browser.
 
 ## Project Structure
 
